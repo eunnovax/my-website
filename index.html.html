@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Генератор Паролей</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .dark {
+            background-color: #333;
+            color: white;
+        }
+        input, button, select {
+            margin: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid gray;
+            font-size: 16px;
+        }
+        #password {
+            font-weight: bold;
+            font-size: 20px;
+            margin-top: 20px;
+            word-break: break-word;
+            cursor: pointer;
+        }
+        #history {
+            margin-top: 30px;
+        }
+        button:hover {
+            transform: scale(1.05);
+            transition: transform 0.2s;
+        }
+    </style>
+</head>
+<body>
+    <h1>Генератор Паролей</h1>
+
+    <input type="text" id="length" placeholder="Длина пароля (до 50)">
+    <br>
+
+    <label><input type="checkbox" id="includeLetters"> Буквы</label>
+    <label><input type="checkbox" id="includeNumbers"> Цифры</label>
+    <label><input type="checkbox" id="includeSymbols"> Символы</label>
+    <br>
+
+    <select id="letterCase">
+        <option value="mixed">По умолчанию</option>
+        <option value="lower">Только маленькие</option>
+        <option value="upper">Только заглавные</option>
+    </select>
+    <br>
+
+    <button onclick="generatePassword()">Сгенерировать пароль</button>
+    <button onclick="copyPassword()">Скопировать пароль</button>
+    <button onclick="togglePasswordVisibility()">Показать/Скрыть пароль</button>
+    <button onclick="clearAll()">Очистить всё</button>
+    <button onclick="toggleTheme()">Переключить тему</button>
+
+    <div id="password" onclick="copyPassword()"></div>
+    <div id="strength"></div>
+
+    <div id="history">
+        <h3>История паролей:</h3>
+        <ul id="historyList"></ul>
+    </div>
+
+    <script>
+        let passwordHistory = [];
+        let passwordVisible = true;
+
+        function generatePassword() {
+            const length = parseInt(document.getElementById('length').value);
+            const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const numbers = '0123456789';
+            const symbols = '!@#$%^&*()-_=+[]{};:,.<>?';
+
+            let characters = '';
+            let password = '';
+
+            const includeLetters = document.getElementById('includeLetters').checked;
+            const includeNumbers = document.getElementById('includeNumbers').checked;
+            const includeSymbols = document.getElementById('includeSymbols').checked;
+
+            if (isNaN(length)) {
+                document.getElementById('password').innerText = 'Введите цифры';
+                return;
+            }
+
+            if (length > 50) {
+                document.getElementById('password').innerText = 'Слишком много символов (макс 50)';
+                return;
+            }
+
+            if (length < 4) {
+                document.getElementById('password').innerText = 'Минимум 4 символа';
+                return;
+            }
+
+            if (!includeLetters && !includeNumbers && !includeSymbols) {
+                document.getElementById('password').innerText = 'Выберите хотя бы один вариант!';
+                return;
+            }
+
+            if (includeLetters) characters += letters;
+            if (includeNumbers) characters += numbers;
+            if (includeSymbols) characters += symbols;
+
+            if (includeLetters) password += letters.charAt(Math.floor(Math.random() * letters.length));
+            if (includeNumbers) password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+            if (includeSymbols) password += symbols.charAt(Math.floor(Math.random() * symbols.length));
+
+            for (let i = password.length; i < length; i++) {
+                password += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+
+            password = shuffle(password);
+
+            const letterCase = document.getElementById('letterCase').value;
+            if (letterCase === 'lower') {
+                password = password.toLowerCase();
+            } else if (letterCase === 'upper') {
+                password = password.toUpperCase();
+            }
+
+            document.getElementById('password').innerText = password;
+            passwordVisible = true;
+            checkStrength(password);
+
+            passwordHistory.unshift(password);
+            if (passwordHistory.length > 5) passwordHistory.pop();
+            updateHistory();
+        }
+
+        function shuffle(str) {
+            return str.split('').sort(() => 0.5 - Math.random()).join('');
+        }
+
+        function copyPassword() {
+            const password = document.getElementById('password').innerText;
+            if (password) {
+                navigator.clipboard.writeText(password);
+                alert('Пароль скопирован!');
+            }
+        }
+
+        function togglePasswordVisibility() {
+            if (!document.getElementById('password').innerText) return;
+            passwordVisible = !passwordVisible;
+            document.getElementById('password').style.filter = passwordVisible ? 'none' : 'blur(8px)';
+        }
+
+        function clearAll() {
+            document.getElementById('length').value = '';
+            document.getElementById('includeLetters').checked = false;
+            document.getElementById('includeNumbers').checked = false;
+            document.getElementById('includeSymbols').checked = false;
+            document.getElementById('letterCase').value = 'mixed';
+            document.getElementById('password').innerText = '';
+            document.getElementById('strength').innerText = '';
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark');
+        }
+
+        function checkStrength(password) {
+            let strengthText = '';
+            if (password.length < 6) {
+                strengthText = 'Слабый пароль';
+            } else if (password.length < 10) {
+                strengthText = 'Средний пароль';
+            } else {
+                strengthText = 'Сильный пароль';
+            }
+            document.getElementById('strength').innerText = strengthText;
+        }
+
+        function updateHistory() {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            passwordHistory.forEach(pwd => {
+                const li = document.createElement('li');
+                li.innerText = pwd;
+                li.onclick = function() {
+                    navigator.clipboard.writeText(pwd);
+                    alert('Пароль из истории скопирован!');
+                };
+                historyList.appendChild(li);
+            });
+        }
+    </script>
+
+</body>
+</html>
